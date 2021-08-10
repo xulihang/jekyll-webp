@@ -102,3 +102,44 @@ AddType image/webp .webp
 
 > Depending on other configurations in your `.htaccess` file you might have to update your `ExpiresByType`, `ExpiresDefault` and `Header set Cache-Control` directives to include the webp format as well.
 
+Here is the `Web.conf` file for IIS (modified from this [post](https://forums.iis.net/p/1245571/2153730.aspx?Rewrite+file+jpg+to+file+jpg+webp)):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <system.webServer>
+        <rewrite>
+            <rules>
+                <clear />
+                <rule name="webp" enabled="false">
+                    <match url="(.+)\.(jpe?g|png)$" ignoreCase="false" />
+                    <conditions logicalGrouping="MatchAll">
+                    <add input="{HTTP_ACCEPT}" pattern="image/webp" ignoreCase="false" />
+                    <add input="{DOCUMENT_ROOT}/{R:1}.webp" matchType="IsFile" />
+                    </conditions>
+                    <action type="Rewrite" url="{R:1}.webp" logRewrittenUrl="true" />
+                    <serverVariables>
+                    <set name="ACCEPTS_WEBP" value="true" />
+                    </serverVariables>
+                </rule>
+            </rules>
+            <outboundRules rewriteBeforeCache="true">
+                <rule name="jpg to webp" preCondition="ResponseIsHtml" enabled="true">
+                <match filterByTags="Img" pattern="(.+)\.(jpe?g|png)$" />
+                <action type="Rewrite" value="{R:1}.webp" />
+                    <conditions>
+                        <add input="{HTTP_ACCEPT}" pattern="image/webp" />
+                    </conditions>
+                </rule>
+                <preConditions>
+                <preCondition name="ResponseIsHtml">
+                    <add input="{RESPONSE_CONTENT_TYPE}" pattern="^text/html" />
+                </preCondition>
+                </preConditions>
+            </outboundRules>
+        </rewrite>
+        <urlCompression doStaticCompression="false" doDynamicCompression="false" />
+    </system.webServer>
+</configuration>
+```
+
